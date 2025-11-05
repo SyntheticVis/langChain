@@ -1,0 +1,37 @@
+# Centralized environment variables from .env file
+# Copy .env.example to .env and fill in your actual values
+# cp .env.example .env
+
+services:
+  weather-agent-ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SCRIPT: weather_agent_ollama.py
+    container_name: weather-agent-ollama
+    env_file:
+      - .env
+    environment:
+      # Ollama-specific with defaults
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-granite3.1-moe:3b}
+      # LangSmith project override for Ollama
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT_OLLAMA:-${LANGSMITH_PROJECT:-weather-agent-ollama}}
+    stdin_open: true
+    tty: true
+
+  weather-agent-openai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SCRIPT: weather_agent.py
+    container_name: weather-agent-openai
+    env_file:
+      - .env
+    environment:
+      # LangSmith project override for OpenAI
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT_OPENAI:-${LANGSMITH_PROJECT:-weather-agent-openai}}
+    stdin_open: true
+    tty: true

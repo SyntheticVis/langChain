@@ -8,6 +8,7 @@ Demonstrates:
 4. Structured output
 5. Conversational memory
 6. Full agent creation and execution
+7. LangSmith tracing and observability
 """
 
 import os
@@ -17,6 +18,12 @@ from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain.tools import tool, ToolRuntime
 from langgraph.checkpoint.memory import InMemorySaver
+
+# LangSmith tracing is automatically enabled when environment variables are set:
+# - LANGSMITH_TRACING=true
+# - LANGSMITH_API_KEY=<your-api-key>
+# - LANGSMITH_PROJECT=<project-name> (optional but recommended)
+# Get your API key from https://smith.langchain.com
 
 
 # Define system prompt
@@ -88,9 +95,16 @@ if __name__ == "__main__":
     # Check if environment variables are set
     if not os.getenv("OPENAI_API_KEY"):
         print("Error: OPENAI_API_KEY environment variable is not set.")
-        print("Please run: source env_exports.sh")
-        print("Or use: ./run_example.sh weather_agent.py")
+        print("Please set: export OPENAI_API_KEY=<your-api-key>")
         exit(1)
+    
+    # LangSmith tracing (optional but recommended)
+    if os.getenv("LANGSMITH_TRACING") == "true":
+        langsmith_project = os.getenv("LANGSMITH_PROJECT", "weather-agent-openai")
+        print(f"✅ LangSmith tracing enabled (project: {langsmith_project})")
+        print(f"   View traces at: https://smith.langchain.com")
+    else:
+        print("ℹ️  LangSmith tracing disabled. Set LANGSMITH_TRACING=true to enable.")
     
     # `thread_id` is a unique identifier for a given conversation.
     config = {"configurable": {"thread_id": "1"}}
