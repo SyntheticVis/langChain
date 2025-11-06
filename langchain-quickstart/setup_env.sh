@@ -40,17 +40,34 @@ echo "Please fill in your environment variables:"
 echo ""
 
 # LangSmith
+read -p "Enter your LangSmith API key: " langsmith_key
+if [ ! -z "$langsmith_key" ]; then
+    sed -i.bak "s|LANGSMITH_API_KEY=.*|LANGSMITH_API_KEY=$langsmith_key|" "$ENV_FILE"
+fi
+
+read -p "Enter LangSmith project name (default: weather-agent): " langsmith_project
+if [ ! -z "$langsmith_project" ]; then
+    sed -i.bak "s|LANGSMITH_PROJECT=.*|LANGSMITH_PROJECT=$langsmith_project|" "$ENV_FILE"
+fi
+
 read -p "Enable LangSmith tracing? (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    sed -i.bak 's/LANGSMITH_TRACING=false/LANGSMITH_TRACING=true/' "$ENV_FILE"
-    read -p "Enter your LangSmith API key: " langsmith_key
-    if [ ! -z "$langsmith_key" ]; then
-        sed -i.bak "s|LANGSMITH_API_KEY=.*|LANGSMITH_API_KEY=$langsmith_key|" "$ENV_FILE"
-    fi
-    read -p "Enter LangSmith project name (default: weather-agent): " langsmith_project
-    if [ ! -z "$langsmith_project" ]; then
-        sed -i.bak "s|LANGSMITH_PROJECT=.*|LANGSMITH_PROJECT=$langsmith_project|" "$ENV_FILE"
+    # Validate that API key is provided if tracing is enabled
+    if [ -z "$langsmith_key" ]; then
+        echo "⚠️  Warning: LangSmith tracing requires an API key!"
+        read -p "Enter your LangSmith API key (required for tracing): " langsmith_key
+        if [ ! -z "$langsmith_key" ]; then
+            sed -i.bak "s|LANGSMITH_API_KEY=.*|LANGSMITH_API_KEY=$langsmith_key|" "$ENV_FILE"
+            sed -i.bak 's/LANGSMITH_TRACING=false/LANGSMITH_TRACING=true/' "$ENV_FILE"
+        else
+            echo "❌ Error: LangSmith API key is required when tracing is enabled."
+            echo "   Disabling tracing. You can enable it later after setting the API key."
+            sed -i.bak 's/LANGSMITH_TRACING=true/LANGSMITH_TRACING=false/' "$ENV_FILE"
+        fi
+    else
+        # API key was provided earlier, enable tracing
+        sed -i.bak 's/LANGSMITH_TRACING=false/LANGSMITH_TRACING=true/' "$ENV_FILE"
     fi
 else
     sed -i.bak 's/LANGSMITH_TRACING=true/LANGSMITH_TRACING=false/' "$ENV_FILE"

@@ -15,7 +15,7 @@ services:
     environment:
       # Ollama-specific with defaults
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-granite3.1-moe:3b}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen3:8b}
       # LangSmith project override for Ollama
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT_OLLAMA:-${LANGSMITH_PROJECT:-weather-agent-ollama}}
     stdin_open: true
