@@ -52,7 +52,7 @@ if [ "$AGENT_TYPE" == "ollama" ]; then
     docker run --rm -it \
         --env-file .env \
         -e OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-http://host.docker.internal:11434}" \
-        -e OLLAMA_MODEL="${OLLAMA_MODEL:-granite3.1-moe:3b}" \
+        -e OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:3b}" \
         -e LANGSMITH_PROJECT="${LANGSMITH_PROJECT_OLLAMA:-${LANGSMITH_PROJECT:-weather-agent-ollama}}" \
         "weather-agent-$AGENT_TYPE:latest"
 else

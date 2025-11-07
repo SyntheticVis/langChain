@@ -61,7 +61,7 @@ def get_user_location(runtime: ToolRuntime[Context]) -> str:
 # Configure model - using Ollama (local LLM)
 # Ollama configuration from environment variables
 ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-ollama_model = os.getenv("OLLAMA_MODEL", "granite3.1-moe:3b")
+ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
 
 model = ChatOllama(
     model=ollama_model,
@@ -105,8 +105,14 @@ if __name__ == "__main__":
         print("Please set: export OLLAMA_BASE_URL=<your-ollama-url>")
         exit(1)
     
-    print(f"Connecting to Ollama at: {ollama_base_url}")
-    print(f"Using model: {ollama_model}")
+    print("=" * 50)
+    print("🤖 LLM Configuration")
+    print("=" * 50)
+    print(f"Provider: Ollama")
+    print(f"Base URL: {ollama_base_url}")
+    print(f"Model: {ollama_model}")
+    print(f"LLM Class: ChatOllama")
+    print("=" * 50)
     
     # LangSmith tracing (optional but recommended)
     if os.getenv("LANGSMITH_TRACING") == "true":

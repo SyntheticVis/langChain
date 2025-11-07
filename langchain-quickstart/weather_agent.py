@@ -97,6 +97,18 @@ if __name__ == "__main__":
         print("Error: OPENAI_API_KEY environment variable is not set.")
         print("Please set: export OPENAI_API_KEY=<your-api-key>")
         exit(1)
+    
+    # Print LLM configuration
+    print("=" * 50)
+    print("🤖 LLM Configuration")
+    print("=" * 50)
+    print(f"Provider: OpenAI")
+    print(f"Model: gpt-4o-mini")
+    print(f"LLM Class: {type(model).__name__}")
+    print(f"Temperature: 0.5")
+    print(f"Max Tokens: 1000")
+    print("=" * 50)
+    
     # LangSmith tracing (optional but recommended)
     if os.getenv("LANGSMITH_TRACING") == "true":
         langsmith_project = os.getenv("LANGSMITH_PROJECT", "weather-agent-openai")
