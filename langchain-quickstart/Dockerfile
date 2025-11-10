@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code (both scripts)
 COPY weather_agent.py .
 COPY weather_agent_ollama.py .
+COPY weather_agent_ollama_model.py .
 
 # Use ARG to specify which script to run (default: weather_agent_ollama.py)
 ARG SCRIPT=weather_agent_ollama.py

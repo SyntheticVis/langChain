@@ -24,16 +24,22 @@ case "$1" in
         AGENT_TYPE="ollama"
         CONTAINER_NAME="weather-agent-ollama"
         ;;
+    ollama_model|weather_agent_ollama_model.py)
+        SCRIPT_NAME="weather_agent_ollama_model.py"
+        AGENT_TYPE="ollama-model"
+        CONTAINER_NAME="weather-agent-ollama-model"
+        ;;
     openai|weather_agent.py)
         SCRIPT_NAME="weather_agent.py"
         AGENT_TYPE="openai"
         CONTAINER_NAME="weather-agent-openai"
         ;;
     *)
-        echo "Usage: $0 [ollama|openai]"
+        echo "Usage: $0 [ollama|ollama_model|openai]"
         echo ""
         echo "Examples:"
         echo "  $0 ollama     # Run weather_agent_ollama.py"
+        echo "  $0 ollama_model  # Run weather_agent_ollama_model.py"
         echo "  $0 openai     # Run weather_agent.py"
         exit 1
         ;;
@@ -48,11 +54,15 @@ echo ""
 echo "🚀 Running $CONTAINER_NAME..."
 echo ""
 
-if [ "$AGENT_TYPE" == "ollama" ]; then
+if [ "$AGENT_TYPE" == "ollama" ] || [ "$AGENT_TYPE" == "ollama-model" ]; then
     docker run --rm -it \
         --env-file .env \
         -e OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-http://host.docker.internal:11434}" \
         -e OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:3b}" \
+        -e LANG="C.UTF-8" \
+        -e LC_ALL="C.UTF-8" \
+        -e PYTHONIOENCODING="UTF-8" \
+        -e PYTHONUTF8="1" \
         -e LANGSMITH_PROJECT="${LANGSMITH_PROJECT_OLLAMA:-${LANGSMITH_PROJECT:-weather-agent-ollama}}" \
         "weather-agent-$AGENT_TYPE:latest"
 else

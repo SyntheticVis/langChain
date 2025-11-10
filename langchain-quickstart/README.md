@@ -1,8 +1,9 @@
 # Weather Agent - LangChain Quickstart
 
-A simple LangChain agent for weather forecasting with LangSmith tracing support. Available in two versions:
-- **weather_agent.py**: Uses OpenAI (GPT-4o-mini)
-- **weather_agent_ollama.py**: Uses Ollama (local LLM)
+A simple LangChain agent for weather forecasting with LangSmith tracing support. Available in multiple versions:
+- **weather_agent.py**: Uses OpenAI (GPT-4o-mini) with Agents API
+- **weather_agent_ollama.py**: Uses Ollama (local LLM) with Agents API
+- **weather_agent_ollama_model.py**: Uses Ollama (local LLM) with Models API (models-only, no agent framework)
 
 ## Prerequisites
 
@@ -59,20 +60,32 @@ See `.env.example` for all available configuration options.
    
    **Note**: Smaller models (2b parameters) may have limited tool calling capabilities. The agent will work better with models that have 3b+ parameters.
 
-2. **Run Ollama agent:**
+2. **Run Ollama agent (interactive input required):**
    ```bash
-   # Simple - uses .env file automatically
-   docker compose up weather-agent-ollama --build
-
-   # Override specific values if needed
-   OLLAMA_MODEL=llama3.2:3b docker-compose up weather-agent-ollama --build
+   # IMPORTANT: Use 'docker compose run' for interactive input, NOT 'docker compose up'
+   # 'docker compose up' only shows logs and doesn't provide interactive stdin
+   
+   # Build first
+   docker compose build weather-agent-ollama
+   
+   # Run with interactive input (recommended)
+   docker compose run --rm weather-agent-ollama
+   
+   # Or run models-only version
+   docker compose build weather-agent-ollama-model
+   docker compose run --rm weather-agent-ollama-model
    ```
 
 **For OpenAI version:**
 ```bash
-# Simple - uses .env file automatically
-docker-compose up weather-agent-openai --build
+# Build first
+docker compose build weather-agent-openai
+
+# Run with interactive input
+docker compose run --rm weather-agent-openai
 ```
+
+**Note:** `docker compose up` attaches to logs only and doesn't provide interactive terminal input. Use `docker compose run` for interactive sessions where you can type questions.
 
 **Both agents automatically use:**
 - Environment variables from `.env` file
@@ -86,6 +99,9 @@ docker-compose up weather-agent-openai --build
 ```bash
 # Run Ollama agent (loads from .env automatically)
 ./run_docker.sh ollama
+
+# Run Ollama models-only version (loads from .env automatically)
+./run_docker.sh ollama_model
 
 # Run OpenAI agent (loads from .env automatically)
 ./run_docker.sh openai
@@ -219,4 +235,15 @@ export LANGSMITH_TRACING=true
 export LANGSMITH_API_KEY="<your-langsmith-api-key>"
 export LANGSMITH_PROJECT="weather-agent-ollama"
 python weather_agent_ollama.py
+```
+
+**With Ollama Models-only (weather_agent_ollama_model.py):**
+```bash
+pip install -r requirements.txt
+export OLLAMA_BASE_URL="http://localhost:11434"
+export OLLAMA_MODEL="granite3.1-moe:3b"
+export LANGSMITH_TRACING=true
+export LANGSMITH_API_KEY="<your-langsmith-api-key>"
+export LANGSMITH_PROJECT="weather-agent-ollama"
+python weather_agent_ollama_model.py
 ```

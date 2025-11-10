@@ -16,6 +16,34 @@ services:
       # Ollama-specific with defaults
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gpt-oss:20b}
+      # Force UTF-8 to avoid Unicode encoding errors in the terminal
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - PYTHONIOENCODING=UTF-8
+      - PYTHONUTF8=1
+      # LangSmith project override for Ollama
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT_OLLAMA:-${LANGSMITH_PROJECT:-weather-agent-ollama}}
+    stdin_open: true
+    tty: true
+
+  weather-agent-ollama-model:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SCRIPT: weather_agent_ollama_model.py
+    container_name: weather-agent-ollama-model
+    env_file:
+      - .env
+    environment:
+      # Ollama-specific with defaults for models-only runner
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:3b}
+      # Force UTF-8 to avoid Unicode encoding errors in the terminal
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - PYTHONIOENCODING=UTF-8
+      - PYTHONUTF8=1
       # LangSmith project override for Ollama
       - LANGSMITH_PROJECT=${LANGSMITH_PROJECT_OLLAMA:-${LANGSMITH_PROJECT:-weather-agent-ollama}}
     stdin_open: true
