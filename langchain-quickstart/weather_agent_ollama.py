@@ -214,7 +214,7 @@ def get_user_location(runtime: ToolRuntime[Context]) -> str:
         return "Error: User ID not found in context."
     
     # In a real implementation, this would query a user database
-    location = "Florida" if user_id == "1" else "SF"
+    location = "Alaska" if user_id == "1" else "Norway"
     return location
 
 
@@ -232,7 +232,7 @@ if not ollama_base_url:
 model = ChatOllama(
     model=ollama_model,
     base_url=ollama_base_url,
-    temperature=0.5,  # Lower temperature for more consistent tool calling
+    temperature=0.7,  # Lower temperature for more consistent tool calling
     timeout=60,  # Increase timeout for slower models
     num_ctx=4096,  # Context window size (adjust based on model)
     streaming=True,  # Enable streaming for incremental responses
@@ -331,6 +331,139 @@ def print_response(extracted: Dict[str, Any], show_tool_calls: bool = True):
             print_warning("No response content available")
 
 
+def display_memory(checkpointer, config: dict):
+    """
+    Display the conversation history stored in memory.
+    
+    Args:
+        checkpointer: The InMemorySaver checkpointer instance
+        config: Agent configuration with thread_id
+    """
+    try:
+        # Retrieve the checkpoint from memory
+        checkpoint = checkpointer.get(config)
+        
+        if checkpoint is None:
+            print_warning("No conversation history found in memory.")
+            return
+        
+        # Handle different checkpoint structures
+        # Checkpoint might be a dict with channel_values or an object with channel_values attribute
+        if isinstance(checkpoint, dict):
+            channel_values = checkpoint.get("channel_values", {})
+        elif hasattr(checkpoint, "channel_values"):
+            channel_values = checkpoint.channel_values
+        else:
+            print_warning("Unexpected checkpoint structure.")
+            return
+        
+        # Extract messages from channel_values
+        if isinstance(channel_values, dict):
+            messages = channel_values.get("messages", [])
+        elif hasattr(channel_values, "messages"):
+            messages = channel_values.messages
+        else:
+            messages = []
+        
+        if not messages:
+            print_warning("Memory is empty - no messages stored yet.")
+            return
+        
+        print_header("Conversation Memory", "💾")
+        thread_id = config.get("configurable", {}).get("thread_id", "unknown")
+        print(f"{colorize('Thread ID:', Colors.CYAN, bold=True)} {colorize(str(thread_id), Colors.BRIGHT_WHITE)}")
+        print(f"{colorize('Total Messages:', Colors.CYAN, bold=True)} {colorize(str(len(messages)), Colors.BRIGHT_WHITE)}")
+        print()
+        
+        for idx, msg in enumerate(messages, 1):
+            # Determine message type and role
+            msg_type = type(msg).__name__
+            
+            # Check message type using various methods
+            is_human = (msg_type == "HumanMessage" or 
+                       (hasattr(msg, "type") and getattr(msg, "type", None) == "human") or
+                       (isinstance(msg, dict) and msg.get("type") == "human"))
+            
+            is_ai = (msg_type == "AIMessage" or 
+                    (hasattr(msg, "type") and getattr(msg, "type", None) == "ai") or
+                    (isinstance(msg, dict) and msg.get("type") == "ai"))
+            
+            is_tool = (msg_type == "ToolMessage" or 
+                      (hasattr(msg, "type") and getattr(msg, "type", None) == "tool") or
+                      (isinstance(msg, dict) and msg.get("type") == "tool"))
+            
+            if is_human:
+                role = "User"
+                emoji = "👤"
+                color = Colors.BRIGHT_BLUE
+            elif is_ai:
+                role = "Agent"
+                emoji = "🤖"
+                color = Colors.BRIGHT_GREEN
+            elif is_tool:
+                role = "Tool"
+                emoji = "🔧"
+                color = Colors.BRIGHT_MAGENTA
+            else:
+                role = msg_type
+                emoji = "📝"
+                color = Colors.BRIGHT_WHITE
+            
+            # Extract content
+            if hasattr(msg, "content"):
+                content = str(msg.content) if msg.content is not None else ""
+            elif isinstance(msg, dict):
+                content = str(msg.get("content", ""))
+            else:
+                content = str(msg)
+            
+            # Extract tool calls if present
+            tool_calls = None
+            if hasattr(msg, "tool_calls") and msg.tool_calls:
+                tool_calls = msg.tool_calls
+            elif isinstance(msg, dict) and "tool_calls" in msg and msg["tool_calls"]:
+                tool_calls = msg["tool_calls"]
+            
+            # Print message header
+            print_section(f"Message {idx}: {role}", emoji)
+            
+            # Print tool calls if any
+            if tool_calls:
+                print(f"{colorize('Tool Calls:', Colors.MAGENTA, bold=True)}")
+                for tool_call in tool_calls:
+                    if isinstance(tool_call, dict):
+                        tool_name = tool_call.get("name", "unknown")
+                        tool_args = tool_call.get("args", {})
+                    else:
+                        tool_name = getattr(tool_call, "name", "unknown")
+                        tool_args = getattr(tool_call, "args", {})
+                    
+                    print(f"  {colorize('•', Colors.BRIGHT_MAGENTA)} {colorize(tool_name, Colors.BRIGHT_MAGENTA, bold=True)}")
+                    if tool_args:
+                        print(f"    {colorize('Args:', Colors.MAGENTA)} {colorize(str(tool_args), Colors.WHITE)}")
+                print()
+            
+            # Print content (truncate if too long)
+            if content:
+                if len(content) > 500:
+                    print(f"{colorize('Content:', color, bold=True)} {colorize(content[:500] + '...', Colors.WHITE)}")
+                    print(f"{colorize('(truncated, full length: ' + str(len(content)) + ' chars)', Colors.DIM)}")
+                else:
+                    print(f"{colorize('Content:', color, bold=True)} {colorize(content, Colors.WHITE)}")
+            else:
+                print(f"{colorize('Content:', color, bold=True)} {colorize('(empty)', Colors.DIM)}")
+            
+            print()  # Spacing between messages
+        
+        print_success(f"End of memory ({len(messages)} messages)", "✅")
+        
+    except Exception as e:
+        print_error(f"Error retrieving memory: {str(e)}")
+        import traceback
+        if os.getenv("DEBUG", "").lower() == "true":
+            print_error(f"Traceback: {traceback.format_exc()}")
+
+
 def stream_agent_response(agent, messages: list, config: dict, context: Context):
     """
     Stream agent response using stream_mode="messages" for token-level streaming.
@@ -343,6 +476,8 @@ def stream_agent_response(agent, messages: list, config: dict, context: Context)
         context: Runtime context
     """
     tool_calls_shown = set()  # Track which tool calls we've shown
+    tool_results_shown = set()  # Track which tool results we've shown
+    last_messages_count = 0  # Track message count to detect new tool results
     
     for token, metadata in agent.stream(
         {"messages": messages},
@@ -353,7 +488,79 @@ def stream_agent_response(agent, messages: list, config: dict, context: Context)
         # Extract node information from metadata
         node = metadata.get("langgraph_node", "unknown")
         
-        # Only process tokens from the model node, skip tool node outputs
+        # Check if token contains messages list (for detecting new tool results)
+        token_messages = None
+        if isinstance(token, dict) and "messages" in token:
+            token_messages = token["messages"]
+        elif hasattr(token, "messages"):
+            token_messages = token.messages
+        
+        # Check for new ToolMessages in the messages list
+        if token_messages and len(token_messages) > last_messages_count:
+            # New messages added - check for ToolMessages
+            for msg in token_messages[last_messages_count:]:
+                msg_type = type(msg).__name__ if hasattr(type(msg), "__name__") else str(type(msg))
+                is_tool_msg = (msg_type == "ToolMessage" or 
+                              (hasattr(msg, "type") and getattr(msg, "type", None) == "tool") or
+                              (isinstance(msg, dict) and msg.get("type") == "tool"))
+                
+                if is_tool_msg:
+                    # Extract tool name and content
+                    if hasattr(msg, "name"):
+                        tool_name = msg.name
+                    elif isinstance(msg, dict):
+                        tool_name = msg.get("name", "unknown")
+                    else:
+                        tool_name = "unknown"
+                    
+                    if hasattr(msg, "content"):
+                        content = msg.content
+                    elif isinstance(msg, dict):
+                        content = msg.get("content", "")
+                    else:
+                        content = str(msg)
+                    
+                    # Show tool result
+                    tool_id = f"{tool_name}_{str(content)[:50]}"
+                    if tool_id not in tool_results_shown:
+                        print_tool_call(f"{tool_name} (result)")
+                        print(f"{colorize(str(content), Colors.BRIGHT_YELLOW)}")
+                        tool_results_shown.add(tool_id)
+            
+            last_messages_count = len(token_messages)
+        
+        # Check if this token itself is a ToolMessage
+        token_type = type(token).__name__ if hasattr(type(token), "__name__") else str(type(token))
+        is_tool_message = (token_type == "ToolMessage" or 
+                          (isinstance(token, dict) and token.get("type") == "tool") or
+                          (hasattr(token, "type") and getattr(token, "type", None) == "tool"))
+        
+        # Handle tool execution results (if token is a ToolMessage)
+        if is_tool_message or node in ["tools", "tool"]:
+            # Extract tool name and content
+            if hasattr(token, "name"):
+                tool_name = token.name
+            elif isinstance(token, dict):
+                tool_name = token.get("name", "unknown")
+            else:
+                tool_name = None
+            
+            if hasattr(token, "content"):
+                content = token.content
+            elif isinstance(token, dict):
+                content = token.get("content", "")
+            else:
+                content = str(token)
+            
+            # Show tool result if we haven't shown it yet
+            tool_id = f"{tool_name}_{str(content)[:50]}"
+            if tool_name and tool_id not in tool_results_shown:
+                print_tool_call(f"{tool_name} (result)")
+                print(f"{colorize(str(content), Colors.BRIGHT_YELLOW)}")
+                tool_results_shown.add(tool_id)
+            continue
+        
+        # Only process tokens from the model node for text streaming
         if node != "model":
             continue
         
@@ -440,7 +647,7 @@ if __name__ == "__main__":
     print_success("Weather Agent is ready! Type your questions below.", "🚀")
     print_info("💾 Short-term memory enabled - I'll remember our conversation!", "💾")
     print_info("Type 'exit', 'quit', or press Ctrl+C to stop.", "ℹ️")
-    print_info("Type '/history' to view conversation history.", "🔍")
+    print_info("Type '/memory' or '/history' to view conversation history.", "🔍")
     print()
     
     while True:
@@ -460,6 +667,12 @@ if __name__ == "__main__":
         
         # Skip empty input
         if not user_input:
+            continue
+        
+        # Handle /memory and /history commands
+        if user_input.lower() in ['/memory', '/history']:
+            display_memory(checkpointer, config)
+            print()  # Add spacing
             continue
         
         # Process user input with agent
