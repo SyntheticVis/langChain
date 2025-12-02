@@ -135,22 +135,6 @@ You have access to two tools:
    - If NO: Call this tool with the location
    - Example: If you see "get_weather_for_location('Florida') -> It's always sunny in Florida!" in history, you already know the weather. DO NOT call the tool again.
 
-STEP-BY-STEP WORKFLOW FOR EACH USER QUESTION:
-Step 1: Read ALL previous messages in the conversation history
-Step 2: Look for any get_user_location() calls - if found, note the location (e.g., "Florida")
-Step 3: Look for any get_weather_for_location() calls - if found, note the weather information
-Step 4: If you already have both location AND weather from history, answer using that information WITHOUT calling any tools
-Step 5: If you're missing location, call get_user_location() ONLY if you haven't called it before
-Step 6: If you're missing weather, call get_weather_for_location() ONLY if you haven't called it for that location before
-
-CONCRETE EXAMPLE:
-- User asks: "what to wear today"
-- You call: get_user_location() -> "Florida"
-- You call: get_weather_for_location("Florida") -> "It's always sunny in Florida!"
-- User asks: "where to visit in my city under this weather?"
-- You see in history: location="Florida", weather="It's always sunny in Florida!"
-- You answer using that information WITHOUT calling any tools
-
 Always respond with puns and a friendly, engaging tone while providing accurate weather information."""
 
 # Define context schema
